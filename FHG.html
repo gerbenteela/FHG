@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>First Half Goal Value Calculator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#000; --gold:rgb(179,167,119); --goldA:rgba(179,167,119,0.35);
+      --panel:#111; --input:#222; --text:#e8e8e8;
+      --pos:#35d07f; --neg:#ff5c5c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; background:var(--bg); color:var(--gold); font-family:'Roboto',sans-serif;}
+    h1{margin:0; padding:16px 12px; text-align:center; color:var(--gold); font-size:22px;}
+
+    .container{max-width:420px; margin:0 auto; padding:12px;}
+    .card{
+      width:100%; background:var(--panel); border:1px solid var(--gold);
+      border-radius:10px; box-shadow:0 0 10px var(--goldA); padding:12px;
+    }
+
+    label{display:block; margin-top:8px; font-size:14px;}
+    input{
+      width:100%; padding:10px; margin-top:4px; border:1px solid var(--gold); border-radius:8px;
+      background:var(--input); color:#fff; text-align:center; font-size:15px;
+    }
+
+    /* Buttons naast elkaar, samen even breed als velden */
+    .actions{
+      display:grid; grid-template-columns: 1fr auto; gap:8px; margin-top:12px;
+    }
+    .btn-primary{
+      background:var(--gold); color:#000; border:none; padding:10px 14px; border-radius:8px;
+      font-weight:700; cursor:pointer; font-size:14px;
+    }
+    .btn-icon{
+      background:var(--panel); color:var(--gold); border:1px solid var(--gold);
+      padding:10px 12px; border-radius:8px; cursor:pointer; font-size:16px; line-height:1;
+    }
+    .btn-primary:hover{ filter:brightness(1.05); }
+    .btn-icon:hover{ filter:brightness(1.1); }
+
+    .results { margin-top:12px; }
+    .edge-box{
+      padding:12px; border-radius:8px; margin:8px 0; font-weight:700; text-align:center; color:#000;
+    }
+    .text{ color:var(--text); font-size:14px; }
+    .pos{ color:var(--pos); font-weight:700; }
+    .neg{ color:var(--neg); font-weight:700; }
+  </style>
+</head>
+<body>
+  <h1>First Half Goal Value Calculator</h1>
+
+  <div class="container">
+    <!-- Input kaart -->
+    <div class="card">
+      <label>Bookmaker Odd</label>
+      <input type="number" id="odd" step="0.01" placeholder="e.g. 2.10">
+
+      <label>Minute</label>
+      <input type="number" id="minute" placeholder="e.g. 30">
+
+      <label>Shots on Target</label>
+      <input type="number" id="sot" placeholder="e.g. 5">
+
+      <label>Total Shots</label>
+      <input type="number" id="shots" placeholder="e.g. 10">
+
+      <label>Corners</label>
+      <input type="number" id="corners" placeholder="e.g. 4">
+
+      <label>Danger</label>
+      <input type="number" id="danger" placeholder="e.g. 12">
+
+      <label>Yellow</label>
+      <input type="number" id="yellow" placeholder="e.g. 1">
+
+      <label>Red</label>
+      <input type="number" id="red" placeholder="e.g. 0">
+
+      <!-- Buttons even breed als inputs -->
+      <div class="actions">
+        <button class="btn-primary" id="btnCalc">Calculate</button>
+        <button class="btn-icon" id="btnClear" title="Clear inputs">🗑️</button>
+      </div>
+    </div>
+
+    <!-- Resultaat kaart, zelfde breedte/uitlijning -->
+    <div class="card results" id="results" style="display:none;">
+      <div id="edgeBox" class="edge-box">Edge: 0.00%</div>
+      <div id="recommend" class="text"></div>
+      <div id="explanation" class="text" style="margin-top:6px;"></div>
+      <div class="text" style="margin-top:6px; opacity:.85;">
+        <em>Edge = (Bookmaker odd / Fair odd − 1) × 100%</em>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    function parseNum(id){ return parseFloat($(id).value) || 0; }
+
+    function sigmoid(x){ return 1/(1+Math.exp(-x)); }
+
+    function calc(){
+      const odd = parseNum('odd');
+      const minute = parseNum('minute');
+      const sot = parseNum('sot');
+      const shots = parseNum('shots');
+      const corners = parseNum('corners');
+      const danger = parseNum('danger');
+      const yellow = parseNum('yellow');
+      const red = parseNum('red');
+
+      // M-score
+      let m = 0.4*(sot/6) + 0.2*(shots/14) + 0.15*(corners/8) + 0.1*(danger/30)
+              - 0.07*(yellow/4) - 0.15*(red/2);
+      m *= ((45 - minute)/25);
+
+      // Chance
+      const chance = 0.02 + (sigmoid(6*(m - 0.35)) * 0.73);
+
+      // Expected (fair) odd
+      const fairOdd = chance > 0 ? 1 / chance : Infinity;
+
+      // Edge %
+      const edge = (odd && isFinite(fairOdd)) ? ((odd / fairOdd) - 1) * 100 : 0;
+
+      // Edge kleur (gradient achtergrond + tekstkleur)
+      let bg = "orange";
+      if(edge < -50) bg="#660000";
+      else if(edge < -25) bg="red";
+      else if(edge < -10) bg="#ff6666";
+      else if(edge < 0)  bg="orange";
+      else if(edge < 10) bg="#ffcc66";
+      else if(edge < 25) bg="#99ff99";
+      else if(edge < 50) bg="green";
+      else bg="#004d00";
+
+      const edgeBox = $('edgeBox');
+      edgeBox.style.background = bg;
+      edgeBox.textContent = `Edge: ${edge.toFixed(2)}%`;
+
+      // Stake Recommendation (Units) per tabel
+      let stake = "0.00 Units";
+      if(edge > 0){
+        let range = "";
+        if(fairOdd < 1.75) range="<1.75";
+        else if(fairOdd <= 2.5) range="1.75–2.50";
+        else if(fairOdd <= 3.25) range="2.50–3.25";
+        else range=">3.25";
+
+        let band = "";
+        if(chance > 0.50) band=">50";
+        else if(chance > 0.25) band="25-50";
+        else if(chance > 0.10) band="10-25";
+        else band="0-10";
+
+        const table={
+          "<1.75":   {">50":"2.00","25-50":"1.50","10-25":"1.25","0-10":"1.00"},
+          "1.75–2.50":{">50":"1.50","25-50":"1.25","10-25":"1.00","0-10":"0.75"},
+          "2.50–3.25":{">50":"1.25","25-50":"1.00","10-25":"0.75","0-10":"0.50"},
+          ">3.25":   {">50":"1.00","25-50":"0.75","10-25":"0.50","0-10":"0.00"}
+        };
+        stake = `${table[range][band]} Units`;
+      }
+      $('recommend').textContent = `Stake recommendation: ${stake}`;
+
+      // Uitlegregel (Engels) met groen/rode edge waarde
+      const edgeSpan = `<span class="${edge >= 0 ? 'pos':'neg'}">${edge.toFixed(2)}%</span>`;
+      $('explanation').innerHTML =
+        `With this input, the probability of another goal before halftime is ${(chance*100).toFixed(1)}%. `+
+        `The fair odd should be ${isFinite(fairOdd)? fairOdd.toFixed(2) : '—'}. `+
+        `With a bookmaker odd of ${odd || '—'}, the edge is ${edgeSpan}. `+
+        `We recommend a stake of ${stake}.`;
+
+      $('results').style.display = 'block';
+    }
+
+    function clearAll(){
+      ['odd','minute','sot','shots','corners','danger','yellow','red'].forEach(id => $(id).value = '');
+      $('results').style.display = 'none';
+    }
+
+    $('btnCalc').addEventListener('click', calc);
+    $('btnClear').addEventListener('click', clearAll);
+  </script>
+</body>
+</html>
