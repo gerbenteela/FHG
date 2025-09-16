@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>First Half Goal Value Calculator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#000; --gold:rgb(179,167,119); --goldA:rgba(179,167,119,0.35);
+      --panel:#111; --input:#222; --text:#d9d9d9;
+      --pos:#35d07f; --neg:#ff5c5c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; background:var(--bg); color:var(--gold); font-family:'Roboto',sans-serif;}
+    h1{margin:0; padding:12px 10px; text-align:center; color:var(--gold); font-size:20px;}
+
+    .container{max-width:420px; margin:0 auto; padding:8px 10px 12px;}
+    .card{
+      width:100%; background:var(--panel); border:1px solid var(--gold);
+      border-radius:10px; box-shadow:0 0 8px var(--goldA); padding:10px;
+    }
+
+    label{display:block; margin-top:6px; font-size:13px;}
+    input{
+      width:100%; padding:8px; margin-top:3px; border:1px solid var(--gold); border-radius:8px;
+      background:var(--input); color:#fff; text-align:center; font-size:14px;
+    }
+
+    .actions{display:grid; grid-template-columns: 1fr auto; gap:6px; margin-top:10px;}
+    .btn-primary{
+      background:var(--gold); color:#000; border:none; padding:8px 12px; border-radius:8px;
+      font-weight:700; cursor:pointer; font-size:13px;
+    }
+    .btn-icon{
+      background:var(--panel); color:var(--gold); border:1px solid var(--gold);
+      padding:8px 10px; border-radius:8px; cursor:pointer; font-size:16px; line-height:1;
+    }
+    .btn-primary:hover{ filter:brightness(1.05); }
+    .btn-icon:hover{ filter:brightness(1.1); }
+
+    .results { margin-top:10px; }
+    .edge-box{
+      padding:10px; border-radius:8px; margin:6px 0; font-weight:700; text-align:center; color:#000; font-size:15px;
+    }
+    .text{ color:var(--text); font-size:13px; line-height:1.25; }
+    .pos{ color:var(--pos); font-weight:700; }
+    .neg{ color:var(--neg); font-weight:700; }
+
+    .summary{
+      margin-top:6px; border-top:1px dashed var(--gold); padding-top:6px;
+    }
+    .chips{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:6px;
+      margin-top:6px;
+    }
+    .chip{
+      background:#0f0f0f; border:1px solid var(--gold); border-radius:8px;
+      padding:6px 8px; font-size:12px; color:#fff; display:flex; justify-content:space-between; gap:8px;
+    }
+    .chip .k{opacity:.8; color:var(--gold);}
+    .chip .v{font-weight:700; color:#fff;}
+
+    @media (max-height: 750px){
+      h1{font-size:19px; padding:10px 8px;}
+      .container{padding:6px 8px 10px;}
+      .edge-box{padding:8px; font-size:14px;}
+      .text{font-size:12.5px;}
+      .chip{padding:5px 7px; font-size:11.5px;}
+    }
+  </style>
+
+  <!-- html2canvas voor het vastleggen van de resultatenkaart -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+  <h1>First Half Goal Value Calculator</h1>
+
+  <div class="container">
+    <!-- Input -->
+    <div class="card">
+      <label>Match / Notes</label>
+      <input type="text" id="notes" placeholder="e.g. Ajax – PSV">
+
+      <label>Bookmaker Odd</label>
+      <input type="number" id="odd" step="0.01" placeholder="e.g. 2.10">
+
+      <label>Minute</label>
+      <input type="number" id="minute" placeholder="e.g. 30">
+
+      <label>Shots on Target</label>
+      <input type="number" id="sot" placeholder="e.g. 5">
+
+      <label>Total Shots</label>
+      <input type="number" id="shots" placeholder="e.g. 10">
+
+      <label>Corners</label>
+      <input type="number" id="corners" placeholder="e.g. 4">
+
+      <label>Danger</label>
+      <input type="number" id="danger" placeholder="e.g. 12">
+
+      <label>Yellow</label>
+      <input type="number" id="yellow" placeholder="e.g. 1">
+
+      <label>Red</label>
+      <input type="number" id="red" placeholder="e.g. 0">
+
+      <div class="actions">
+        <button class="btn-primary" id="btnCalc">Calculate</button>
+        <button class="btn-icon" id="btnClear" title="Clear inputs">🗑️</button>
+      </div>
+    </div>
+
+    <!-- Result (deze hele kaart wordt gedeeld/gefotografeerd) -->
+    <div class="card results" id="results" style="display:none;">
+      <div id="edgeBox" class="edge-box">Edge: 0.00%</div>
+      <div id="recommend" class="text"></div>
+      <div id="explanation" class="text" style="margin-top:4px;"></div>
+
+      <div class="summary" id="summaryBox">
+        <div class="text" id="noteLine" style="display:none;"></div>
+        <div class="chips">
+          <div class="chip"><span class="k">Odd</span><span class="v" id="cOdd">—</span></div>
+          <div class="chip"><span class="k">Minute</span><span class="v" id="cMin">—</span></div>
+          <div class="chip"><span class="k">SoT</span><span class="v" id="cSoT">—</span></div>
+          <div class="chip"><span class="k">Shots</span><span class="v" id="cShots">—</span></div>
+          <div class="chip"><span class="k">Corners</span><span class="v" id="cCorners">—</span></div>
+          <div class="chip"><span class="k">Danger</span><span class="v" id="cDanger">—</span></div>
+          <div class="chip"><span class="k">Yellow</span><span class="v" id="cYellow">—</span></div>
+          <div class="chip"><span class="k">Red</span><span class="v" id="cRed">—</span></div>
+        </div>
+
+        <!-- Moderne tekstknop -->
+        <button id="btnScreenshot" class="btn-primary" style="margin-top:8px; width:100%;">Save Results</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    function parseNum(id){ return parseFloat($(id).value) || 0; }
+    function sigmoid(x){ return 1/(1+Math.exp(-x)); }
+
+    function calc(){
+      const note = $('notes').value.trim();
+      const odd = parseNum('odd');
+      const minute = parseNum('minute');
+      const sot = parseNum('sot');
+      const shots = parseNum('shots');
+      const corners = parseNum('corners');
+      const danger = parseNum('danger');
+      const yellow = parseNum('yellow');
+      const red = parseNum('red');
+
+      // M-score
+      let m = 0.4*(sot/6) + 0.2*(shots/14) + 0.15*(corners/8) + 0.1*(danger/30)
+              - 0.07*(yellow/4) - 0.15*(red/2);
+      m *= ((45 - minute)/25);
+
+      // Chance
+      const chance = 0.02 + (sigmoid(6*(m - 0.35)) * 0.73);
+
+      // Fair odd
+      const fairOdd = chance > 0 ? 1 / chance : Infinity;
+
+      // Edge %
+      const edge = (odd && isFinite(fairOdd)) ? ((odd / fairOdd) - 1) * 100 : 0;
+
+      // Edge kleur
+      let bg = "orange";
+      if(edge < -50) bg="#660000";
+      else if(edge < -25) bg="red";
+      else if(edge < -10) bg="#ff6666";
+      else if(edge < 0)  bg="orange";
+      else if(edge < 10) bg="#ffcc66";
+      else if(edge < 25) bg="#99ff99";
+      else if(edge < 50) bg="green";
+      else bg="#004d00";
+
+      $('edgeBox').style.background = bg;
+      $('edgeBox').textContent = `Edge: ${edge.toFixed(2)}%`;
+
+      // Stake recommendation
+      let stake = "0.00 Units";
+      if(edge > 0){
+        let range="";
+        if(fairOdd < 1.75) range="<1.75";
+        else if(fairOdd <= 2.5) range="1.75–2.50";
+        else if(fairOdd <= 3.25) range="2.50–3.25";
+        else range=">3.25";
+
+        let band="";
+        if(chance > 0.50) band=">50";
+        else if(chance > 0.25) band="25-50";
+        else if(chance > 0.10) band="10-25";
+        else band="0-10";
+
+        const table={
+          "<1.75":   {">50":"2.00","25-50":"1.50","10-25":"1.25","0-10":"1.00"},
+          "1.75–2.50":{">50":"1.50","25-50":"1.25","10-25":"1.00","0-10":"0.75"},
+          "2.50–3.25":{">50":"1.25","25-50":"1.00","10-25":"0.75","0-10":"0.50"},
+          ">3.25":   {">50":"1.00","25-50":"0.75","10-25":"0.50","0-10":"0.00"}
+        };
+        stake = `${table[range][band]} Units`;
+      }
+      $('recommend').textContent = `Stake recommendation: ${stake}`;
+
+      // Uitleg
+      const edgeSpan = `<span class="${edge >= 0 ? 'pos':'neg'}">${edge.toFixed(2)}%</span>`;
+      $('explanation').innerHTML =
+        `With this input, the probability of another goal before halftime is ${(chance*100).toFixed(1)}%. `+
+        `The fair odd should be ${isFinite(fairOdd)? fairOdd.toFixed(2) : '—'}. `+
+        `With a bookmaker odd of ${odd || '—'}, the edge is ${edgeSpan}.`;
+
+      // Samenvatting
+      if(note){ $('noteLine').style.display='block'; $('noteLine').textContent = `Note: ${note}`; }
+      else { $('noteLine').style.display='none'; }
+      $('cOdd').textContent     = odd ? odd.toFixed(2) : '—';
+      $('cMin').textContent     = minute || '—';
+      $('cSoT').textContent     = sot || '—';
+      $('cShots').textContent   = shots || '—';
+      $('cCorners').textContent = corners || '—';
+      $('cDanger').textContent  = danger || '—';
+      $('cYellow').textContent  = yellow || '—';
+      $('cRed').textContent     = red || '—';
+
+      $('results').style.display = 'block';
+    }
+
+    function clearAll(){
+      ['notes','odd','minute','sot','shots','corners','danger','yellow','red'].forEach(id => $(id).value = '');
+      $('results').style.display = 'none';
+    }
+
+    // Web Share API (met fallback): deel als bestand; anders open in nieuw tabblad
+    function shareResults(){
+      const card = document.getElementById('results');
+      const btn  = document.getElementById('btnScreenshot');
+
+      html2canvas(card, {
+        scale: 2,
+        backgroundColor: null,
+        ignoreElements: (el) => el === btn
+      }).then(canvas => {
+        // Canvas -> Blob -> File
+        canvas.toBlob(async (blob) => {
+          const ts = new Date().toISOString().replace(/[:.]/g,'-');
+          const fileName = `results-${ts}.png`;
+
+          try {
+            const file = new File([blob], fileName, { type: 'image/png' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: 'First Half Goal Value',
+                text: 'Results snapshot'
+              });
+              return; // gedeeld via deel-sheet
+            }
+          } catch(e) {
+            // doorgaan naar fallback
+          }
+
+          // Fallback: open de afbeelding in een nieuw tabblad (vanuit object URL)
+          const url = URL.createObjectURL(blob);
+          const w = window.open(url, '_blank');
+          // revoke later om geheugen te vrijwaren
+          setTimeout(() => URL.revokeObjectURL(url), 15000);
+          if (!w) {
+            // Als popups geblokkeerd zijn, laatste redmiddel: toon inline
+            const imgWindow = window.open('', '_blank');
+            if (imgWindow) {
+              imgWindow.document.write('<img src="'+ url +'" style="width:100%;">');
+            }
+          }
+        }, 'image/png', 1.0);
+      });
+    }
+
+    // Events
+    $('btnCalc').addEventListener('click', calc);
+    $('btnClear').addEventListener('click', clearAll);
+    $('btnScreenshot').addEventListener('click', shareResults);
+  </script>
+</body>
+</html>
